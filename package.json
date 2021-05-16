@@ -10,15 +10,16 @@
     "index.js"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "purs-node Main.Test",
+    "dev": "node-dev --respawn --no-notify index.js test/File.elm"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "node-dev": "^6.2.0",
-    "purescript": "^0.13.8",
+    "node-dev": "file:.yalc/node-dev",
+    "purescript": "^0.14.1",
     "purty": "^6.3.0",
-    "spago": "^0.18.1",
+    "spago": "^0.20.2",
     "ts-node-dev": "^1.1.1",
     "typescript": "^4.1.3"
   }

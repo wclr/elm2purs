@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "packages": {
+    "node-dev": {
+      "signature": "2af7999bc52a77c3f3e9c211990c2940",
+      "file": true,
+      "replaced": "^6.2.0"
+    }
+  }
+}

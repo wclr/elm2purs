@@ -4,21 +4,14 @@ You can edit this file as you like.
 -}
 { name = "my-project"
 , dependencies =
-  [ "aff"
-  , "arrays"
-  , "console"
-  , "debug"
+  [ "console"
   , "effect"
-  , "maybe"
-  , "node-buffer"
   , "node-fs"
   , "node-fs-aff"
   , "node-process"
   , "partial"
-  , "prelude"
   , "psci-support"
   , "spec"
-  , "strings"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

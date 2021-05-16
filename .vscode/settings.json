@@ -1,5 +1,7 @@
 {
-  "files.autoSave": "afterDelay",
-  "files.autoSaveDelay": 500,
-  "purescript.addNpmPath": true
+  // "files.autoSave": "afterDelay",
+  // "files.autoSaveDelay": 500,
+  "purescript.addNpmPath": true,
+  // "purescript.buildCommand": "npx spago build --purs-args --json-errors",
+  // "purescript.fastRebuild": false
 }
