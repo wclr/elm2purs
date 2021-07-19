@@ -97,6 +97,7 @@ importChecks =
   , patternToModule "Bits" "Data.Int.Bits"
   , patternToModule "Number" "Data.Number"
   , patternToModule "String" "Data.String"
+  , patternToModule "Set" "Data.Set"
   , patternToModule "Array" "Data.Array"
   , patternToModule "Maybe" "Data.Maybe"
   , patternToModule "Apply" "Control.Apply"
@@ -108,7 +109,11 @@ importChecks =
         else []
   , \text ->
       if S.contains (Pattern "/\\") text
-        then [ makeImport "Data.Tuple.Nested" (Just "((/\\))") Nothing]
+        then [ makeImport "Data.Tuple.Nested" (Just "((/\\), type (/\\))") Nothing]
+        else []
+, \text ->
+      if S.contains (Pattern " : ") text
+        then [ makeImport "Data.Array" (Just "((:))") Nothing]
         else []
   , \text ->
       if S.contains (Pattern "Maybe") text
@@ -125,6 +130,14 @@ replaceTypes text =
     # R.replace (reWord "Bool") "Boolean"
     # R.replace (reWord "\\(\\)") "Unit"
     # R.replace (reWord "List") "Array"
+    # R.replace (reWord "Dict") "Map"
+
+
+replaceBool :: String -> String
+replaceBool text =
+  text
+    # R.replace (reWord "True") "true"
+    # R.replace (reWord "False") "false"
 
 
 replaceFns :: String -> String
@@ -135,15 +148,36 @@ replaceFns text =
 
     # R.replace (reWord "String.toInt") "Int.fromString"
     # R.replace (reWord "toInt") "Int.fromString"
+    # R.replace (reWord "round ") "Int.round "
 
-  # R.replace (reWord "String.toList") "CodeUnits.toCharArray"
+    # R.replace (reWord "String.toList") "CodeUnits.toCharArray"
 
     # R.replace (reWord "String.fromInt") "show"
     # R.replace (reWord "String.fromFloat") "show"
+    # R.replace (reWord "String.isEmpty") "String.null"
+    # R.replace (reWord "String.join") "String.joinWith"
 
     # R.replace (reWord "Maybe.map") "map"
     # R.replace (reWord "List.map") "map"
     # R.replace (reWord "Array.map") "map"
+    # R.replace (reWord "List.append") "append"
+    # R.replace (reWord "Array.append") "append"
+
+    # R.replace (reWord "List.foldl") "Array.foldl"
+    # R.replace (reWord "List.foldr") "Array.foldr"
+    # R.replace (reWord "List.filter") "Array.filter"
+    # R.replace (reWord "List.head") "Array.head"
+    # R.replace (reWord "List.concat") "Array.concat"
+    # R.replace (reWord "List.intersperse") "Array.intersperse"
+
+
+    # R.replace (reWord "List.filterMap") "Array.mapMaybe"
+
+    # R.replace (reWord "Dict.get") "Map.Lookup"
+    # R.replace (reWord "Dict.empty") "Map.empty"
+    # R.replace (reWord "Dict.update") "(flip Map.alter)"
+
+    # R.replace (reWord "Set.fromList") "Set.fromFoldable"
 
     # R.replace (unsafeRegex "\\s\\bround\\b" global) " Int.round"
 
@@ -173,13 +207,11 @@ replaceFns text =
 
 
 
-
-
-
 -- Candidates for smart replacement:
 -- Tuple.mapBoth =
 --String.startWith = str = isJust $ String.stripPrefix (Pattern str)
 -- shiftLeftBy
+
 
 replaceOperators :: String -> String
 replaceOperators text =
@@ -188,6 +220,8 @@ replaceOperators text =
     # R.replace (unsafeRegex " ::" global) ( " : ")
     # replaceAll (Pattern " <|") (Replacement " $")
     # replaceAll (Pattern " |>") (Replacement " #")
+    # replaceAll (Pattern " <<") (Replacement " <<<")
+    # replaceAll (Pattern " >>") (Replacement " >>>")
     # replaceAll (Pattern " //") (Replacement " `div`")
 
 
@@ -254,7 +288,7 @@ tupleStrArity typeLevel len =
 
 replaceTuples :: Boolean -> String -> String
 replaceTuples typeLevel text =
-  R.replace' (unsafeRegex "\\(([^(){}]+)\\)" global)
+  R.replace' (unsafeRegex "\\( ([^(){}]+) \\)" global)
     (\_ items ->
       (\t ->
         if S.contains (Pattern ",") t
@@ -265,6 +299,7 @@ replaceTuples typeLevel text =
     )
     text
   where
+  useOperator = true
   wrapParens = \str -> "(" <> str <> ")"
   replaceInner :: String -> String
   replaceInner =
@@ -281,16 +316,19 @@ replaceTuples typeLevel text =
       # \items ->
         (wrapper $ length items) <> (joinWith joiner items)
       # \res ->
-        case typeLevel of
-          false -> wrapParens res
-          true -> res
+        case useOperator of
+          true -> wrapParens res
+          false -> res
+        -- case typeLevel of
+        --   false -> wrapParens res
+        --   true -> res
 
   wrapper =
     \len ->
-      case typeLevel of
+      case not useOperator of
         true -> "Tuple" <> tupleStrArity typeLevel len <> " "
         false -> ""
-  joiner = if typeLevel then " " else " /\\ "
+  joiner = if useOperator then " /\\ " else " "
 
 
 insertTypeParams :: String -> String -> String
@@ -316,6 +354,14 @@ replaceRecordAssign text =
     (\whole _ -> R.replace (unsafeRegex " =(\\s?)" global) (":$1") whole
 
     ) text
+
+
+-- Just simple: { combined | -->  combined {
+replaceRecordMod :: String -> String
+replaceRecordMod text =
+  text #
+    R.replace (unsafeRegex ("\\{ ([a-z][a-zA-z1-9']+) \\|") global)
+      "$1 {"
 
 
 
@@ -432,12 +478,31 @@ initState codeLines =
   }
 
 
+replaceImportedModules :: String -> String
+replaceImportedModules text =
+  text
+  # replaceMod "Set" "Data.Set"
+  where
+  replaceMod what with =
+    replace (Pattern $ "import " <> what) (Replacement $ "import " <> with)
+
+
 replaceImport :: String -> String
 replaceImport text =
   text
+    # R.replace
+      (unsafeRegex "import ([A-Za-z1-9.]+) as ([A-Za-z1-9.]+) exposing (\\(..\\))$" noFlags)
+      "import $1\nimport $1 as $2"
+    # R.replace
+      (unsafeRegex "import ([A-Za-z1-9.]+) as ([A-Za-z1-9.]+) exposing (\\(.+\\))$" noFlags)
+      "import $1 $3\nimport $1 as $2"
+    # R.replace
+      (unsafeRegex "import ([A-Za-z1-9.]+) exposing (\\(.+\\))$" noFlags)
+      "import $1 $2\nimport $1 as $1"
     # R.replace (unsafeRegex "import ([A-Za-z1-9.]+)$" noFlags) "import $1 as $1"
     # replace (Pattern " exposing (..)") (Replacement "")
     # replace (Pattern " exposing") (Replacement "")
+    # replaceImportedModules
 
 
 replaceModule :: String -> String
@@ -498,7 +563,6 @@ replaceSig idx lines text = text
   # insertTypeParams (fromMaybe text $ getTextToNextTopLine idx lines)
 
 
-
 replaceTypeDefSymbol :: String -> String
 replaceTypeDefSymbol text =
   text
@@ -549,7 +613,7 @@ foldConvert state codeL =
       false
         | isSigStart codeL -> true
         | otherwise -> false
-      true -> not (isTopLevelNonEmpty codeL)
+      true -> not (isTopLevelNonEmpty codeL && not isSigStart codeL)
   isModuleBody =
     if state.isModuleBody
     then true
@@ -602,6 +666,7 @@ foldConvert state codeL =
                     <<< replaceTypes
                   false ->
                     replaceOperators
+                    <<< replaceBool
                     <<< replaceFns
               false -> replaceModule
 
@@ -621,6 +686,7 @@ convert _ text =
       # addImports
   # S.joinWith "\n"
   # replaceRecordAssign
+  # replaceRecordMod
 
   where
   lines = trimEnd <$> S.split (Pattern "\n") text
