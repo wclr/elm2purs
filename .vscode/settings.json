@@ -1,7 +1,16 @@
 {
   // "files.autoSave": "afterDelay",
   // "files.autoSaveDelay": 500,
-  "purescript.addNpmPath": true,
+  "purescript.topLevelFormat": {
+    "formatter": "tidy",
+    "onlySelection": false
+  },  
+  "purescript.addNpmPath": false,
+  "purescript.fullBuildOnSave": true,
+
+  "purescript.noFsDiagnostics": true,    
+  "purescript.diagnosticsOnType": true,  
+  "purescript.diagnosticsOnOpen": true,  
   // "purescript.buildCommand": "npx spago build --purs-args --json-errors",
   // "purescript.fastRebuild": false
 }
