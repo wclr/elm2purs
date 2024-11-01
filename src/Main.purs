@@ -120,11 +120,10 @@ importChecks =
 replaceTypes :: String -> String
 replaceTypes text =
   text
-    # R.replace (reWord "()") "Unit"
+    # R.replace (reWord "\\(\\)") "Unit"
     # R.replace (reWord "Never") "Void"
     # R.replace (reWord "Float") "Number"
     # R.replace (reWord "Bool") "Boolean"
-    # R.replace (reWord "\\(\\)") "Unit"
     # R.replace (reWord "List") "Array"
     # R.replace (reWord "Dict") "Map"
 
